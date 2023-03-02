@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Amigo secreto</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.1.10/dist/sweetalert2.all.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+
+<body>
+    <img src="./logo-principal.png">
+    <!-- CSS -->
+    <style>
+        img {
+            padding-top: 2%;
+            width: 20%; 
+            height: 150px;
+            float: left;
+        }
+        .contenedor {
+            padding: 30px;
+        }
+
+        #btn-group-encabezado .btn {
+            width: 180px;
+        }
+        h1 {
+            margin-left: 12%;
+            margin-top: 2%;
+            margin-bottom: 2%;
+            width: 65%;
+            font-size: 25px;
+            float: left;
+        }
+        footer {
+            background-color: darkslateblue;
+            color: white !important;
+            margin-top: 100px;
+            padding-bottom: 2%;
+            width: 100%;
+            height: 5%;
+        }
+        p {
+            margin-left: 5%;
+            padding-top: 46px;
+            font-size: 20px;
+        }
+      
+    </style>
+
+    <!-- HTML -->
+
+    <h1> Desafio - AMIGO SECRETO - SORTEIO E ENVIO DE E-MAILS </h1>
+    <div class="contenedor">
+        <div class="text-center">
+            <div class="btn-group" id="btn-group-encabezado">
+                <div class="btn btn-success" onclick="nuevoJugador()">
+                    <i class="fas fa-user-plus"></i> Novo jogador
+                </div>
+                <div class="btn btn-danger" onclick="limpiarTablero()">
+                    <i class="fas fa-users-slash"></i> Limpar tabela
+                </div>
+                <div class="btn btn-primary" onclick="jugar()">
+                    <i class="fas fa-dice"></i> Jogar
+                </div>
+            </div>
+        </div>
+        <br>
+        <table class="table table-light table-striped">
+            <tbody id="tableroJugadores">
+            </tbody>
+        </table>
+    </div>
+
+    <footer>
+        <p>Adaptado para cumprir Desafio de Desenvolvimento de Produtos de Software III - JULIO CESAR RA-042401 UNIARAXÁ</p>
+    </footer>
+
+    <!-- JS -->
+    <script>
+        let socket = io()//Suficiente para abrir a comunicação entre cliente-servidor
+
+        //La base de datos estará en el cliente
+        if (!localStorage.getItem("jugadores-amigo-secreto")) {
+            //Colocar valores padrão
+            let jugadores = []
+        } else {
+            jugadores = JSON.parse(localStorage.getItem("jugadores-amigo-secreto"))
+        }
+
+        actualizarTabla()
+
+        function actualizarTabla() {
+            localStorage.setItem("jugadores-amigo-secreto", JSON.stringify(jugadores))
+            let html = `
+            <tr>
+                <th>
+                    Nome
+                </th>
+                <th>
+                    E-mail
+                </th>
+                <th>
+                    Opção
+                </th>
+            </tr>`
+            for (let i = 0; i < jugadores.length; i++) {
+                const j = jugadores[i];
+                html += `
+                <tr>
+                    <td>
+                        <i class="fas fa-user"></i> ${j[0]}
+                    </td>
+                    <td>
+                        <i class="far fa-envelope"></i> ${j[1]}
+                    </td>
+                    <td style="width:220px;">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-warning" onclick="editarJugador(${i})">
+                                <i class="fas fa-user-edit"></i> Editar
+                            </button>
+                            <button type="button" class="btn btn-danger" onclick="borrarJugador(${i})">
+                                <i class="fas fa-user-slash"></i> Eliminar
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                `
+            }
+            document.getElementById("tableroJugadores").innerHTML = html
+        }
+
+        async function nuevoJugador() {
+            let box = await swal.fire({
+                showCancelButton: true,
+                title: `Novo Jogador`,
+                html: `
+                <input type="text" placeholder="Nome" class="swal2-input" id="box-nombre">
+                <input type="text" placeholder="E-mail" class="swal2-input" id="box-correo">
+                `,
+                preConfirm: () => {
+                    let nombre = document.getElementById("box-nombre").value
+                    let correio = document.getElementById("box-correo").value
+
+                    if (buscarJugadorRepetido(nombre)) {
+                        Swal.showValidationMessage(
+                            "O jogador já está en jogo, escolha outro nome"
+                        )
+                        return false;
+                    }
+                    if (!nombre) {
+                        Swal.showValidationMessage(
+                            "Nome é obrigatório!"
+                        )
+                        return false;
+                    }
+                    if (!correio) {
+                        Swal.showValidationMessage(
+                            "E-mail é obrigatório!"
+                        )
+                        return false;
+                    }
+                    return [nombre, correio]
+                }
+            })
+            if (box.isConfirmed) {
+                jugadores.push(box.value)
+                actualizarTabla()
+            }
+        }
+
+        async function editarJugador(i) {
+            let box = await swal.fire({
+                showCancelButton: true,
+                title: `Editar Jogador`,
+                html: `
+                <input type="text" placeholder="Nome" class="swal2-input" id="box-nombre" value="${jugadores[i][0]}">
+                <input type="text" placeholder="E-mail" class="swal2-input" id="box-correo" value="${jugadores[i][1]}">
+                `,
+                preConfirm: () => {
+                    let nombre = document.getElementById("box-nombre").value
+                    let correio = document.getElementById("box-correo").value
+
+                    if (buscarJugadorRepetido(nombre, i)) {
+                        Swal.showValidationMessage(
+                            "O jogador já está en jogo, escolha outro nome"
+                        )
+                        return false;
+                    }
+                    if (!nombre) {
+                        Swal.showValidationMessage(
+                            "Nome é obrigatório!"
+                        )
+                        return false;
+                    }
+                    if (!correio) {
+                        Swal.showValidationMessage(
+                            "E-mail é obrigatório!"
+                        )
+                        return false;
+                    }
+                    return [nombre, correio]
+                }
+            })
+            if (box.isConfirmed) {
+                jugadores[i] = box.value
+                actualizarTabla()
+            }
+        }
+
+        /*
+        A verificação de um jogador repetido pode ser feita pelo nome ou por e-mail.
+        Eu considero que é mais exato com o correio, mas o jogo quando se trata de pessoas
+        conhecido, bastaria verificar de acordo com os nomes
+        */
+        function buscarJugadorRepetido(nombre, ignorarIndice = -1) {
+            for (let i = 0; i < jugadores.length; i++) {
+                if (i == ignorarIndice) {
+                    continue
+                }
+                const j = jugadores[i];
+                if (j[0].toLowerCase() == nombre.toLowerCase()) {
+                    return true //O jogador já existe
+                }
+            }
+            return false //O jogador não existe
+        }
+
+
+        async function limpiarTablero() {
+            let box = await swal.fire({
+                showCancelButton: true,
+                title: "Ação não reversível",
+                text: "Eliminar todos os jogadores?"
+            })
+            if (box.isConfirmed) {
+                jugadores = []
+                actualizarTabla()
+            }
+        }
+
+        async function borrarJugador(i) {
+            let box = await swal.fire({
+                showCancelButton: true,
+                title: "Ação não reversível",
+                text: `Eliminar a ${jugadores[i][0]}?`
+            })
+            if (box.isConfirmed) {
+                jugadores.splice(i, 1)
+                actualizarTabla()
+            }
+        }
+
+        function jugar() {
+            let parejas = []
+            for (const v of jugadores) {
+                parejas.push(v)
+            }
+            while (true) {
+                finalizar = true
+                for (let i = 0; i < jugadores.length; i++) {
+                    const j = jugadores[i];
+                    if (j == parejas[i]) {
+                        parejas.sort(() => Math.random() - 0.5)
+                        finalizar = false;
+                        if (jugadores.length == 1) {
+                            //testando o algorítmo
+                            finalizar = true
+                        }
+                        break
+                    }
+                }
+                if (finalizar) {
+                    break
+                }
+            }
+            //enviar o jogo para o servidor, para que o servidor envie os e-mails
+            socket.emit("enviar correios", jugadores, parejas)
+        }
+
+        socket.on("correio no enviado", (error) => {
+            swal.fire({
+                title: "Uma mensagem não pode ser enviada",
+                text: "entre no console (F12) para mais detalhes",
+                icon: "error"
+            })
+            console.log(error)
+        })
+
+        socket.on("correio enviado", (para) => {
+            swal.fire({
+                title: "Email enviado",
+                text: "Enviado com sucesso a: " + para,
+                icon: "success"
+            })
+            console.log("o E-mail foi enviado com sucesso a: " + para)
+        })
+    </script>
+</body>
+
+</html>
