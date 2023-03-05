@@ -27,7 +27,7 @@ const {
     SORTEIO_API_URL,
     LISTADESEJO_API_URL,
     CONVITE_API_URL,
-  } = require('./url');
+  } = require('./URL');
   
   const participanteServiceProxy = httpProxy(PARTICIPANTE_API_URL);
   const grupoServiceProxy = httpProxy(GRUPO_API_URL);
