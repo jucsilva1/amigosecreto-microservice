@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const listaDesejosRoutes = require('./src/routes/listaDesejosRoutes');
+const listaDesejosRoutes = require('./src/routes/listaDesejosRoutes');// rota corrigida
 
 const app = express();
 app.use(express.json());
