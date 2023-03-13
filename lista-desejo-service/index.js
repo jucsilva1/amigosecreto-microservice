@@ -1,13 +1,12 @@
-const express = require('express');
 require('dotenv').config();
+const express = require('express');
 const mongoose = require('mongoose');
-const routes = require('./routes/routes');
+const listaDesejosRoutes = require('./src/routes/listaDesejosRoutes');
 
 const app = express();
-
 app.use(express.json());
 
-app.use(routes);
+app.use(listaDesejosRoutes)
 
 // Credentials
 const dbUser = process.env.DB_USER
@@ -16,7 +15,7 @@ mongoose
 .connect(`mongodb+srv://${dbUser}:${dbPassword}@cluster0.ztnmhf4.mongodb.net/?retryWrites=true&w=majority`,
 )
 .then(() => {
-    app.listen(3336)
+    app.listen(3333)
     console.log("Conectou ao Banco de Dados!")
 })
 .catch((err) => console.log(err));
